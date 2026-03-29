@@ -32,6 +32,10 @@ const Transaction = ({ auth }: PageProps) => {
   const [printDateFrom, setPrintDateFrom] = useState('')
   const [printDateTo, setPrintDateTo] = useState('')
   const [searchCategory, setSearchCategory] = useState('')
+  const [tablePageIndex, setTablePageIndex] = useState(0)
+  const [incomePageIndex, setIncomePageIndex] = useState(0)
+  const [expensePageIndex, setExpensePageIndex] = useState(0)
+  const itemsPerPage = 10
 
   useEffect(() => {
     fetchTransactions()
@@ -114,7 +118,30 @@ const Transaction = ({ auth }: PageProps) => {
     }
   }, [filteredTransactions])
 
+  // Pagination calculations
+  const tableStartIdx = tablePageIndex * itemsPerPage
+  const tableEndIdx = tableStartIdx + itemsPerPage
+  const paginatedTransactions = filteredTransactions.slice(tableStartIdx, tableEndIdx)
+  const totalTablePages = Math.ceil(filteredTransactions.length / itemsPerPage)
+
+  const incomeStartIdx = incomePageIndex * itemsPerPage
+  const incomeEndIdx = incomeStartIdx + itemsPerPage
+  const paginatedIncomes = balanceSheet.incomes.slice(incomeStartIdx, incomeEndIdx)
+  const totalIncomePages = Math.ceil(balanceSheet.incomes.length / itemsPerPage)
+
+  const expenseStartIdx = expensePageIndex * itemsPerPage
+  const expenseEndIdx = expenseStartIdx + itemsPerPage
+  const paginatedExpenses = balanceSheet.expenses.slice(expenseStartIdx, expenseEndIdx)
+  const totalExpensePages = Math.ceil(balanceSheet.expenses.length / itemsPerPage)
+
   let runningBalance = 0
+
+  // Reset pagination pages when filters change
+  React.useEffect(() => {
+    setTablePageIndex(0)
+    setIncomePageIndex(0)
+    setExpensePageIndex(0)
+  }, [filteredTransactions, balanceSheet])
 
   return (
     <AuthenticatedLayout user={auth.user}>
@@ -189,7 +216,8 @@ const Transaction = ({ auth }: PageProps) => {
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="min-w-full divide-y">
                 <thead className="bg-gray-100">
                   <tr>
@@ -205,8 +233,8 @@ const Transaction = ({ auth }: PageProps) => {
                 </thead>
 
                 <tbody>
-                  {filteredTransactions.length > 0 ? (
-                    filteredTransactions.map((t, i) => {
+                  {paginatedTransactions.length > 0 ? (
+                    paginatedTransactions.map((t, i) => {
                       runningBalance += t.transaction_type === 'income' ? Number(t.amount) : -Number(t.amount)
 
                       return (
@@ -251,6 +279,30 @@ const Transaction = ({ auth }: PageProps) => {
                 </tbody>
               </table>
             </div>
+            {filteredTransactions.length > 0 && (
+              <div className="mt-4 flex items-center justify-center gap-4 border-t pt-4">
+                <span className="text-sm text-gray-600">
+                  {tableStartIdx + 1} - {Math.min(tableEndIdx, filteredTransactions.length)} of {filteredTransactions.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTablePageIndex(Math.max(0, tablePageIndex - 1))}
+                    disabled={tablePageIndex === 0}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &lt;
+                  </button>
+                  <button
+                    onClick={() => setTablePageIndex(Math.min(totalTablePages - 1, tablePageIndex + 1))}
+                    disabled={tablePageIndex === totalTablePages - 1}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
 
@@ -297,9 +349,9 @@ const Transaction = ({ auth }: PageProps) => {
               </span>
             </div>
 
-            <div className="space-y-3">
-              {balanceSheet.incomes.length > 0 ? (
-                balanceSheet.incomes.map((item) => (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {paginatedIncomes.length > 0 ? (
+                paginatedIncomes.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-start justify-between gap-3 border-b border-emerald-200/70 pb-3"
@@ -319,6 +371,29 @@ const Transaction = ({ auth }: PageProps) => {
                 <p className="text-sm text-slate-500">No income transactions found.</p>
               )}
             </div>
+            {balanceSheet.incomes.length > 0 && (
+              <div className="mt-4 flex items-center justify-center gap-4 border-t pt-4">
+                <span className="text-sm text-gray-600">
+                  {incomeStartIdx + 1} - {Math.min(incomeEndIdx, balanceSheet.incomes.length)} of {balanceSheet.incomes.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIncomePageIndex(Math.max(0, incomePageIndex - 1))}
+                    disabled={incomePageIndex === 0}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &lt;
+                  </button>
+                  <button
+                    onClick={() => setIncomePageIndex(Math.min(totalIncomePages - 1, incomePageIndex + 1))}
+                    disabled={incomePageIndex === totalIncomePages - 1}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-rose-50 border border-rose-200 shadow-md rounded-2xl p-6">
@@ -332,8 +407,8 @@ const Transaction = ({ auth }: PageProps) => {
             </div>
 
             <div className="space-y-3">
-              {balanceSheet.expenses.length > 0 ? (
-                balanceSheet.expenses.map((item) => (
+              {paginatedExpenses.length > 0 ? (
+                paginatedExpenses.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-start justify-between gap-3 border-b border-rose-200/70 pb-3"
@@ -353,6 +428,29 @@ const Transaction = ({ auth }: PageProps) => {
                 <p className="text-sm text-slate-500">No expense transactions found.</p>
               )}
             </div>
+            {balanceSheet.expenses.length > 0 && (
+              <div className="mt-4 flex items-center justify-center gap-4 border-t pt-4">
+                <span className="text-sm text-gray-600">
+                  {expenseStartIdx + 1} - {Math.min(expenseEndIdx, balanceSheet.expenses.length)} of {balanceSheet.expenses.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setExpensePageIndex(Math.max(0, expensePageIndex - 1))}
+                    disabled={expensePageIndex === 0}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &lt;
+                  </button>
+                  <button
+                    onClick={() => setExpensePageIndex(Math.min(totalExpensePages - 1, expensePageIndex + 1))}
+                    disabled={expensePageIndex === totalExpensePages - 1}
+                    className="px-3 py-1 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
